@@ -20,8 +20,9 @@ COPY ./suzieq /root/.local/lib/python3.7/site-packages/suzieq
 COPY ./build/suzieq-cfg.yml /root/.suzieq/suzieq-cfg.yml
 
 # Certificates and such for REST server
-COPY ./build/key.pem /root/.suzieq/
-COPY ./build/cert.pem /root/.suzieq/
+# COPY ./build/key.pem /root/.suzieq/
+# COPY ./build/cert.pem /root/.suzieq/
+RUN mkdir /root/.suzieq/tls
 COPY ./build/launch-gui /usr/local/bin/suzieq-gui
 #COPY logo-small.jpg /suzieq
 

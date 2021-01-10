@@ -19,9 +19,9 @@ def check_config_file(cfgfile):
 
 
 def check_for_cert_files():
-    if not os.path.isfile(os.getenv("HOME") + '/.suzieq/key.pem') or not \
-            os.path.isfile(os.getenv("HOME") + '/.suzieq/cert.pem'):
-        print("ERROR: Missing cert files in ~/.suzieq")
+    if not os.path.isfile(os.getenv("SQUZIEQ_REST_TLS_KEY")) or not \
+            os.path.isfile(os.getenv("SQUZIEQ_REST_TLS_CERT")):
+        print("ERROR: Missing cert files in ~/.suzieq/tls") 
         sys.exit(1)
 
 
@@ -58,5 +58,5 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000,
                 log_level=get_configured_log_level(),
                 log_config=get_log_config(),
-                ssl_keyfile=os.getenv("HOME") + '/.suzieq/key.pem',
-                ssl_certfile=os.getenv("HOME") + '/.suzieq/cert.pem')
+                ssl_keyfile=os.getenv("SQUZIEQ_REST_TLS_KEY"),
+                ssl_certfile=os.getenv("SQUZIEQ_REST_TLS_CERT"))
