@@ -1,0 +1,95 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: suzieq
+  name: suzieq-deployment
+  labels:
+    app: suzieq
+spec:
+  replicas: 1
+  strategy: 
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: suzieq
+  template:
+    metadata:
+      labels:
+        app: suzieq
+    spec:
+      volumes:
+          - name: suzieq-tls
+            secret:
+              secretName: suzieq-tls-secret
+          - name: parquet-volume
+            persistentVolumeClaim:
+              claimName: parquet-pv-claim
+
+      containers:
+      - name: suzieq-rest
+        image: hyposcaler/suzieq:wip
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"        
+        env:
+          - name: SQUZIEQ_REST_TLS_CERT
+            value: "/root/.suzieq/tls/tls.crt"
+          - name: SQUZIEQ_REST_TLS_KEY
+            value: "/root/.suzieq/tls/tls.key"
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: suzieq-tls
+            mountPath: "/root/.suzieq/tls/"
+            readOnly: true
+          - name: parquet-volume
+            mountPath: "/suzieq/parquet"
+        command: ['sq-rest-server.py']
+        
+      - name: suzieq-poller
+        image: hyposcaler/suzieq:wip
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"        
+        env:
+        - name: NETWORK_PASS
+          valueFrom:
+            secretKeyRef:
+              name: network-pass-secret
+              key: password
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: suzieq-tls
+            mountPath: "/root/.suzieq/tls/"
+            readOnly: true
+          - name: parquet-volume
+            mountPath: "/suzieq/parquet"        
+        command: ['sh', '-c', 'echo pod 1 is Running ; sleep 3600']
+
+      - name: suzieq-gui
+        image: hyposcaler/suzieq:wip
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "125m"
+          limits:
+            memory: "250Mi"
+            cpu: "250m"        
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: suzieq-tls
+            mountPath: "/root/.suzieq/tls/"
+            readOnly: true
+          - name: parquet-volume
+            mountPath: "/suzieq/parquet"        
+        command: ['suzieq-gui']
+      imagePullSecrets:
+      - name: regcred
