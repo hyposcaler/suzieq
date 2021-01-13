@@ -8,9 +8,7 @@ This document started as a weekend project to walk thru getting suzieq on k8s in
 
 The enviroment I have for my network management software is effectively a managed k8s enviroment.  It's what I have access to for "managed compute", and it also has access to the managment plane of my network gear.  So if I want to go to the real lab or prod, I have a vested interest in being able to deploy suzieq on k8s.
 
-I also like the idea of suzieq as a api endpoint for network data.  Putting aside for a moment that I like software, as a network engineer sometimes I would rather just have the data without the tinkering with the software.   SuzieQ is quick and simple to get up and running, I don't want to complicate it, part of the appeal is the simplicity.
-
-I like the idea of connecting to a suzieQ deployment versus running the pollers directly on my workstation.  Playing with that as a puzzle problem appeals to me as much as suzieQ as a product appeals to me as a network engineer.  I like the idea of both the journey and the destination both as it were.
+The idea of using a HTTP based API for accessing much of the info that suzieq collects appeals to me.  I like the idea of connecting to a suzieQ deployment versus running the pollers directly on my workstation.  Playing with that as a puzzle problem appeals to me as much as suzieQ as a product appeals to me as a network engineer.    I like the idea of the journey and the destination as it were.
 
 ## who is this for, why share it
 
@@ -367,4 +365,8 @@ spec:
       - name: regcred
 ```
 
+<<<<<<< HEAD
 deploy with `kubectl apply -f samples/k8s/deployment.yml`
+=======
+We can deploy with `kubectl apply -f samples/k8s/deployment.yml`
+>>>>>>> 6f54da5a6b8bcc5c1ee8a0a1db1e5ce0311170ea
