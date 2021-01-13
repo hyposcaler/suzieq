@@ -2,38 +2,41 @@
 
 Why?
 
-My current environment is largely k8s, this is also the enviroment where I would ultimately run suzieq for production.  I don't know k8s well, it's just the compute hammer I have to work with in my current environment. That said, I do happen to like k8s as a hammer, and luckily suzieq seems to do a pretty good job of being a k8s nail.  
+I don't know k8s well, it's just the compute hammer I have to work with in my current environment. That said, I do happen to like k8s as a hammer, and luckily suzieq seems to do a pretty good job of being a k8s nail.  
 
-This document started as a weekend project to walk thru getting suzieq on k8s in my private lab for no other reason than it seemed fun.  The more I worked with it on k8s the more I liked the idea.
+This document started as a weekend project to walk thru getting suzieq on k8s in my private lab for no other reason than it seemed fun.  The more I worked with it on k8s the more I liked the idea, and the more I liked the idea of deploying in my real physical lab.
 
-The enviroment I have for my network management software is effectively a managed k8s enviroment.  It's what I have access to for "managed compute", and it also has access to the managment plane of my network gear.  I have a vested interest in being able to deploy suzieq on k8s.
+The enviroment I have for my network management software is effectively a managed k8s enviroment.  It's what I have access to for "managed compute", and it also has access to the managment plane of my network gear.  So if I want to go to the real lab or prod, I have a vested interest in being able to deploy suzieq on k8s.
 
-I also like the idea of suzieq as a api endpoint for network data.  Putting aside for a moment that I like software, as a network engineer I would really rather just have the data without the tinkering with the software.  
+I also like the idea of suzieq as a api endpoint for network data.  Putting aside for a moment that I like software, as a network engineer sometimes I would rather just have the data without the tinkering with the software.   SuzieQ is quick and simple to get up and running, I don't want to complicate it, part of the appeal is the simplicity.
 
-The idea of using a HTTP based API for accessing much of the info that suzieq collects appeals to me.  I like the idea of connecting to a suzieQ deployment versus running the pollers directly on my workstation.  Playing with that as a puzzle problem appeals to me as much as suzieQ as a product appeals to me as a network engineer.    I like the idea of the journey and the destination as it were.
+I like the idea of connecting to a suzieQ deployment versus running the pollers directly on my workstation.  Playing with that as a puzzle problem appeals to me as much as suzieQ as a product appeals to me as a network engineer.  I like the idea of both the journey and the destination both as it were.
 
 ## who is this for, why share it
 
-mostly me, so I can do it again if I need to, but I don't imagine I'm gonna be the first person that thinks of running on k8s.
+mostly me, so I can do it again if I need to, but I don't imagine I'm gonna be the first person that thinks of running SuzieQ on k8s. 
+
 ## the basic target
 
 What's needed
 
 - For persisting data I will use a k8s [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
-- For managing config I will store configs as a k8s [config maps](https://kubernetes.io/docs/concepts/configuration/configmap/)
+- For managing config I will store configs as a k8s [config map](https://kubernetes.io/docs/concepts/configuration/configmap/)
 - For storing secrets like certificates, keys or passwords I will use k8s [secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
 
-I will run 3 containers in a single k8s pod, one container for each of the following processes that make up suzieq
+I will run 3 containers in a single k8s pod, one container for each of the following processes that make up suzieq.  
 
 1. `sq-poller`
 2. `sq-rest-server.py`
 3. `suzieq-gui`
 
-I will use a persistent volume to store the data, I have no real idea what I'd need in temrs of size but we're gonna use 5Gi of storage as a placeholder.  
+For initial discovery it keeps things simple having them share a pod.
 
-Stretch goal
+I will use a persistent volume to store the data, I have no real idea what I'd need in temrs of size so will default to 5Gi of storage as a placeholder.  
 
-Use ReadWriteMany volumes to have the "sq-rest-server.py" and `sq-poller` containers run on different pods accessing the same parquet files.
+/Stretch goal/
+
+Use ReadWriteMany volumes to have the `sq-rest-server.py` and `sq-poller` containers run on different pods accessing the same parquet files.
 
 ## Generating the certificates
 
@@ -104,6 +107,8 @@ In fact it's the default config, with one small change:  I have added a subdirec
 
 The other config we need to keep track of is the inventory.  The inventory is also a yaml based file for this demo we have two, but we are going to store them in the same config map
 
+
+
 ```yaml
 - namespace: eos
   hosts:
@@ -122,7 +127,7 @@ If I were using SSH keys, I would use a k8s ssh key secret and mount them into t
 
 Either way I mash these up into the same yaml file named configmap.yml.  
 
-Each document defines one configmap with one config map holding both inventory files, the other holding just the suzieq config.    The resulting file looks like the following.
+The resulting file looks like the following.
 
 ```yaml
 ---
@@ -173,6 +178,8 @@ suzieq-inventory   2      20h
 ```
 
 After they are created, they can later be edited inplace, or overwritten with new 
+
+Another Idea that appeals to me is using an init container that dynamically creates the poller configmap.
 
 ## Persistent Volumes
 
@@ -360,4 +367,4 @@ spec:
       - name: regcred
 ```
 
-We can deploy with `kubectl apply -f samples/k8s/deployment.yml`
+deploy with `kubectl apply -f samples/k8s/deployment.yml`
