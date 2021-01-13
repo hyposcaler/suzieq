@@ -1,38 +1,43 @@
 # suzieq on k8s
 
-My current environment is largely k8s, this is also the enviroment where I would ultimately run suzieq for production.  I don't know k8s well, it's just the compute hammer I have to work with in my current environment. That said, I do happen to like k8s as a hammer, and luckily suzieq seems to do a pretty good job of being a k8 nail.  
+Why?
 
-This document started as a weekend project to walk thru getting suzieq on k8 in my private lab for no other reason than it seemed fun.  
+My current environment is largely k8s, this is also the enviroment where I would ultimately run suzieq for production.  I don't know k8s well, it's just the compute hammer I have to work with in my current environment. That said, I do happen to like k8s as a hammer, and luckily suzieq seems to do a pretty good job of being a k8s nail.  
 
-## who is this for
+This document started as a weekend project to walk thru getting suzieq on k8s in my private lab for no other reason than it seemed fun.  The more I worked with it on k8s the more I liked the idea.
 
-mostly me, but.... 
+The enviroment I have for my network management software is effectively a managed k8s enviroment.  It's what I have access to for "managed compute", and it also has access to the managment plane of my network gear.  I have a vested interest in being able to deploy suzieq on k8s.
 
-If you....
+I also like the idea of suzieq as a api endpoint for network data.  Putting aside for a moment that I like software, as a network engineer I would really rather just have the data without the tinkering with the software.  
 
-- already know k8s; this will speed things up and give you a good start for getting suzieq up and running on k8, this is a pretty straight forward starting point for thinking about how to scale it out.
+The idea of using a HTTP based API for accessing much of the info that suzieq collects appeals to me.  I like the idea of connecting to a suzieQ deployment versus running the pollers directly on my workstation.  Playing with that as a puzzle problem appeals to me as much as suzieQ as a product appeals to me as a network engineer.    I like the idea of the journey and the destination as it were.
 
-- already know docker and docker compose but not k8s; this is more less just trying to do a "k8" version of the docker-compose in /samples/docker. I tried to stick to the same ideas aside from how I handle secrets in k8s, I tried to make this a direct translation from docker compose to k8.
+## who is this for, why share it
 
-- feel lost; don't worry. You don't need k8 to do cool things with suzeiq. Docker works just as well and Dinesh and Justin have provided a good starting point with the pre built containers. learn the docker stuph first.
-
+mostly me, so I can do it again if I need to, but I don't imagine I'm gonna be the first person that thinks of running on k8s.
 ## the basic target
 
-- For persisting data I will use a k8 [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
-- For managing config I will store configs as k8 [config maps](https://kubernetes.io/docs/concepts/configuration/configmap/)
-- For storing secrets like certificates, keys or passwords I will use k8 [secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+What's needed
 
-I will run 3 containers in a single k8 pod, one container for each of the following processes that make up suzieq
+- For persisting data I will use a k8s [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+- For managing config I will store configs as a k8s [config maps](https://kubernetes.io/docs/concepts/configuration/configmap/)
+- For storing secrets like certificates, keys or passwords I will use k8s [secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+
+I will run 3 containers in a single k8s pod, one container for each of the following processes that make up suzieq
 
 1. `sq-poller`
 2. `sq-rest-server.py`
 3. `suzieq-gui`
 
-I will use a persistent volume to store the data, I have no real idea what I'd need but we're gonna use 5Gi as a placeholder.  
+I will use a persistent volume to store the data, I have no real idea what I'd need in temrs of size but we're gonna use 5Gi of storage as a placeholder.  
+
+Stretch goal
+
+Use ReadWriteMany volumes to have the "sq-rest-server.py" and `sq-poller` containers run on different pods accessing the same parquet files.
 
 ## Generating the certificates
 
-I need a cert for the demo deployment, a self signed cert will do.  In production the certificate would be signed by my internal CA.  I use tls secrets in k8s today where I need to expose certificate to containers as opposed to building the certificates into the continers.
+I need a cert for the demo deployment, a self signed cert will do.  In production the certificate would be signed by my internal CA.  I use tls secrets in k8s today where I need to expose certificates to containers as opposed to building the certificates into the continers.
 
 We can use openssl to generate the certificate with the following command 
 
@@ -58,7 +63,9 @@ Organizational Unit Name (eg, section) []:network
 Common Name (eg, your name or your server's hostname) []:suzieq.network.hyposcaler.net
 Email Address []:devnull@hyposcaler.io
 ```
-Once I have the certs I'll store them as secrets on the k8 server.  For the lab I'll just use kubectl for that.  The following command will create the secret from the cert.pem and key.pem created by openssl earlier.  
+
+Once I have the certs I'll store them as secrets on the k8s server.  For the lab I'll just use kubectl for that.  The following command will create the secret from the cert.pem and key.pem created by openssl earlier.  
+
 
 ```
 kubectl create secret tls suzieq-tls-secret \
@@ -66,13 +73,15 @@ kubectl create secret tls suzieq-tls-secret \
   --key=key.pem
 ```
 
-In production things might work out differently but ultimately will have the same results; the public and private bits of the TLS cert are stored in a k8 tls secret.  
+Regardless of how the cert is created, a k8s TLS secret is typically the interface for the deployment to access it.  There are a variety of methods to manage secrets securely on k8, they tend to have use of k8s secrets or similar mounts, in common as the delivery method for exposing the secrets to containers.  
 
-Once I hvae the TLS secret The key and cert files from openssl can be deleted.  I can get the cert/key back from the server if we need to.
+In practice it creates a good approximation of what suzieq would see in prod.
+
+Once I have created the k8s TLS secret, the key and cert files from openssl can be deleted.  
 
 ## Generating the configMaps
 
-There are two config related files that we want to use with suzieW
+There are two config related files that we want to use with suzieQ
 
 the first is `suzieq-cfg.yml`. It is the main suzieq config file, it holds pointers to the assorted paths used by suzieq. It also holds references to the the API_KEY used by the Rest server for auth, and pointers to the locations of the TLS certificates. 
 
@@ -91,9 +100,9 @@ rest_certfile: /suzieq/tls/cert.pem
 rest_keyfile: /suzieq/tls/key.pem
 ```
 
-In fact it's the default config, with one small change:  I have added a subdirectory under /suzieq/ to hold the certificates.  I like having an empty directory to mount the TLS secrets into, also helps avoid accidentally wiping out the other contents of the directory when you mount the secrets.  
+In fact it's the default config, with one small change:  I have added a subdirectory under /suzieq/ to hold the certificates.  I like having an empty directory to mount the TLS secrets into.
 
-The other config we need to keep track of is the inventory.  The inventory is also a yaml based file for this demo we have two
+The other config we need to keep track of is the inventory.  The inventory is also a yaml based file for this demo we have two, but we are going to store them in the same config map
 
 ```yaml
 - namespace: eos
@@ -104,14 +113,16 @@ The other config we need to keep track of is the inventory.  The inventory is al
 ```yaml
 - namespace: junos
   hosts:
-    - url: ssh://neteng:juniper123@192.168.123.252 devtype=junos-mx
+    - url: ssh://neteng:juniper123@10.255.0.11 devtype=junos-mx
 ```
 
-Note I'm storing the paswords here, for a small private virtual lab that gets spun up and down as needed, not an issue.  Not something I would want to do in production, my situation is unique I can't use keys for all my hardware.  If I were using SSH keys, I would use a k8 ssh key secret and mount them into the suzieq directory.
+Note I'm storing the paswords here, for a small private virtual lab that gets spun up and down as needed, I'm happy to do that.  Not something I would want to do in production, and in but in my specific production instance, I need a way to support password based auth.
 
-Either way I mash these up into two seperate documents in the same yaml file named configmap.yml.  
+If I were using SSH keys, I would use a k8s ssh key secret and mount them into the suzieq directory under a keys subfolder.  You specify a path to the key in the suzieq poller config, so it would work well for k8s SSH secret.
 
-Each document defines one configmap with one config map holding both inventory files, the other holding just the suzieq config
+Either way I mash these up into the same yaml file named configmap.yml.  
+
+Each document defines one configmap with one config map holding both inventory files, the other holding just the suzieq config.    The resulting file looks like the following.
 
 ```yaml
 ---
@@ -149,9 +160,9 @@ data:
     rest_keyfile: /suzieq/tls/tls.key
 ```
 
-I use kubectl to create the two configmaps on the k8 cluster using the configmap.yml in /samples/k8s directory using the following command `kubectl create -f ./configmap.yml`
+use kubectl to create the two configmaps on the k8s cluster by running `kubectl create -f samples/k8s/configmap.yml` from the root of the repo
 
-once created we can use kubectl again to verify they exist
+once created use kubectl again to verify they exist
 
 ```cli
 [dev-suzieq]$ kubectl -n suzieq describe configmap
@@ -161,9 +172,11 @@ suzieq-inventory   2      20h
 [dev-suzieq]$
 ```
 
+After they are created, they can later be edited inplace, or overwritten with new 
+
 ## Persistent Volumes
 
-For the persistent volume I can create a file named pvc.yml with the following contents
+For the persistent volume, create a file named pvc.yml with the following contents
 
 ```yaml
 ---
@@ -174,18 +187,73 @@ metadata:
   name: parquet-pv-claim
 spec:
   accessModes:
-    - ReadWriteOnce
-  resources:
+    - ReadWriteOnce     # will only have 1 pod so read 
+  resources:            # write once for now is fine
     requests:
-      storage: 5Gi
+      storage: 5Gi      # 5Gi completely arbitrary value. 
 ```
 
-and deploy it to the cluster via `kbuectl create -f samples/k8s/pvc.yml`, this will cause the cluster to set aside 5Gi of storage, it's lifecyle is not tied to the pod.  The pods are ephemeral, much like the secrets and hte configMaps the storage can persist across the life of many pods.
+deploy it to the cluster via `kbuectl create -f samples/k8s/pvc.yml`, this will cause the cluster to set aside 5Gi of storage, it's lifecyle is not tied to the pod.  The pods are ephemeral, the storage can persist across the life of many pods. 
 
 ## the deployment
 
-We have all our volumes, secrets and storage lined up on the k8 cluster, all that remains isthe deployment for the pod.
+with the volumes, secrets, and storage lined up on the k8s cluster, all that remains is the deployment for the pod.
 
+use a k8s [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) to deploy suzieq.
+
+The docuementation does a pretty good job of explaining what a deployment is. Refer to the k8s deployment documentation for more details. 
+
+This deployment will ensure that there are always 3 containers running.  The containers only really have 3 differences between them
+
+- the command executed at start
+- the volumes they have access to
+- the resource memory and cpu requests/limits
+
+### command executed
+
+There 3 containers, one for each of the the 3 processes/apps that make up suzie-q.  
+
+1. sq-poller
+2. sq-rest-server.py
+3. suzieq-gui
+
+
+sq-rest-server.py and suzieq-gui are pretty straight forward, in this deployment they don't need any addtional args so thier "commands" are going to be `command: ['sq-rest-server.py']` and `command: ['suzieq-gui']` respectively.
+
+For poller we need to pass in some addtional args 
+
+-k to disable host key checking and then arguments for two seperate inventory files
+
+The final command looks like this 
+
+`command: ['sq-poller', '-k', '-D', '/suzieq/inventory/eos.yml', '-D', '/suzieq/inventory/junos.yml']`
+
+
+Note: I don't know that I need to use two different files here, but I seem to recall having had issues with doing two namespaces in the same inventory file.  I don't mind the need for two files, but would prefer being able to point the poller at a directory if multiple files are required for multiple namespaces.
+
+### volumes they have access to
+
+I gave all containers access to all volumes except for the and poller config.  I don't really know what makes sense here, my instinct was to just keep the poller config off of the two containers that are extneral facing.
+
+### the resource memory and cpu requests/limits
+
+I don't have a good idea what makes sense for thse, I picked the values mostly just to try an keep the resources for the pod under what I know my nodes in my private k8s clusters have (t3.mediums).
+
+Until I get into the real lab I won't really have a feel for what practical values here might be.
+
+```yaml
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "500Mi"
+      cpu: "500m"   
+```
+
+
+
+## The whole deployment file 
 
 ```yml
 ---
@@ -197,18 +265,16 @@ metadata:
   labels:
     app: suzieq
 spec:
-  replicas: 1
-  strategy: 
-    type: RollingUpdate
+  replicas: 1            
   selector:
     matchLabels:
-      app: suzieq
+      app: suzieq          
   template:
     metadata:
       labels:
         app: suzieq
     spec:
-      volumes:
+      volumes:                
           - name: suzieq-tls
             secret:
               secretName: suzieq-tls-secret
@@ -242,7 +308,6 @@ spec:
             mountPath: /root/.suzieq/suzieq-cfg.yml 
             subPath: suzieq-cfg.yml 
         command: ['sq-rest-server.py']
-        # command: ['sh', '-c', 'echo "Hello, I am sq-rest-server.py" && sleep 3600']
         
       - name: sq-poller
         image: hyposcaler/suzieq:wip
@@ -270,9 +335,7 @@ spec:
             mountPath: /suzieq/inventory/junos.yml
             subPath: junos.yml
         command: ['sq-poller', '-k', '-D', '/suzieq/inventory/eos.yml', '-D', '/suzieq/inventory/junos.yml']
-        # command: ['sq-poller', '-D', '/suzieq/inventory/eos.yml']
-        # command: ['sh', '-c', 'echo "Hello, I am sq-poller!" && sleep 3600']
-
+ 
       - name: suzieq-gui
         image: hyposcaler/suzieq:wip
         resources:
@@ -293,9 +356,8 @@ spec:
             mountPath: /root/.suzieq/suzieq-cfg.yml
             subPath: suzieq-cfg.yml          
         command: ['suzieq-gui']
-        # command: ['sh', '-c', 'echo "Hello, I am suqzieq-gui" && sleep 3600']
       imagePullSecrets:
       - name: regcred
 ```
 
-
+We can deploy with `kubectl apply -f samples/k8s/deployment.yml`
