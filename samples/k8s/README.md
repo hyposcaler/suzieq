@@ -365,8 +365,5 @@ spec:
       - name: regcred
 ```
 
-<<<<<<< HEAD
 deploy with `kubectl apply -f samples/k8s/deployment.yml`
-=======
-We can deploy with `kubectl apply -f samples/k8s/deployment.yml`
->>>>>>> 6f54da5a6b8bcc5c1ee8a0a1db1e5ce0311170ea
+
