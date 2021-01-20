@@ -10,7 +10,9 @@ metadata:
 spec:
   ports:
   - port: 8000
-    name: gnmi
+    name: sq-rest
+  - port: 8501
+    name: sq-gui
   type: LoadBalancer
   selector:
     app: suzieq
