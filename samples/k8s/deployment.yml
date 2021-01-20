@@ -73,12 +73,9 @@ spec:
             mountPath: /root/.suzieq/suzieq-cfg.yml
             subPath: suzieq-cfg.yml
           - name: inventory-volume
-            mountPath: /suzieq/inventory/eos.yml
-            subPath: eos.yml
-          - name: inventory-volume
-            mountPath: /suzieq/inventory/junos.yml
-            subPath: junos.yml
-        command: ['sq-poller', '-k', '-D', '/suzieq/inventory/eos.yml', '-D', '/suzieq/inventory/junos.yml']
+            mountPath: /suzieq/inventory/inventory.yml
+            subPath: inventory.yml
+        command: ['sq-poller', '-k', '-D', '/suzieq/inventory/inventory.yml']
         # command: ['sq-poller', '-D', '/suzieq/inventory/eos.yml']
         # command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 3600']
 
