@@ -163,7 +163,7 @@ data:
     rest_keyfile: /suzieq/tls/tls.key
 ```
 
-use kubectl to create the two configmaps on the k8s cluster by running `kubectl create -f samples/k8s/configmap.yml` from the root of the repo
+then use kubectl to create the two configmaps on the k8s cluster by running `kubectl create -f samples/k8s/configmap.yml` from the root of the repo
 
 once created use kubectl again to verify they exist
 
@@ -365,5 +365,56 @@ spec:
       - name: regcred
 ```
 
-deploy with `kubectl apply -f samples/k8s/deployment.yml`
+Can deploy it with `kubectl apply -f samples/k8s/deployment.yml`
 
+
+
+## Exposing the Services 
+
+A simple service to front for the gui and rest API can be created via k8s loadbalancer type service.
+
+service.yaml contains the following 
+
+
+```yml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: suzieq
+  annotations:
+    # this annotation isn't generally needed, 
+    # but my private lab is build on AWS, and I don't want a 
+    # public facing VIP
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+  labels:
+    app: suzieq
+spec:
+  ports:
+  - port: 8000
+    name: sq-rest
+  - port: 8501
+    name: sq-gui
+  type: LoadBalancer
+  selector:
+    app: suzieq
+```
+
+create the service by running the command `kbuectl create -f samples/k8s/service.yml` from the root of the repo
+
+You can validate the service via `kubectl -n suzieq get service`
+
+```
+[dev-suzieq]$ kubectl -n suzieq get service
+NAME     TYPE           CLUSTER-IP       EXTERNAL-IP                                                                        PORT(S)                         AGE
+suzieq   LoadBalancer   192.168.72.180   internal-a7830d9f252254cbc89b9b6b7e44bd6f-1102017936.us-east-1.elb.amazonaws.com   8000:30411/TCP,8501:30344/TCP   46m
+[dev-suzieq]$ 
+```
+
+Can test with curl
+
+```
+[dev-suzieq]$ curl --insecure 'https://internal-a7830d9f252254cbc89b9b6b7e44bd6f-1102017936.us-east-1.elb.amazonaws.com:8000/api/v1/interface/show?&access_token=496157e6e869ef7f3d6ecb24a6f6d847b224ee4f'
+[{"namespace":"eos","hostname":"lab1-fab1-pod1-leaf1","ifname":"Ethernet100","state":"up","adminState":"up","type":"ethernet","mtu":1500,"vlan":0,"master":"","ipAddressList":[],"ip6AddressList":[],"timestamp":1611108293987},{"namespace":"eos","hostname":"lab1-fab1-pod1-leaf1","ifname":"Ethernet1","state":"up","adminState":"up","type":"ethernet","mtu":1500,"vlan":0,"master":"","ipAddressList":["10.255.0.10/24"],"ip6AddressList":[],"timestamp":1611108293987}]
+[dev-suzieq]$ 
+```
