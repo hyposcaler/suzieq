@@ -54,9 +54,10 @@ if __name__ == "__main__":
         "-c",
         "--config",
         type=str, help="alternate config file",
-        default=f'{os.getenv("HOME")}/.suzieq/'
+        default=f'{os.getenv("HOME")}/.suzieq/suzieq-cfg.yml'
     )
     userargs = parser.parse_args()
+    app.cfg_file = userargs.config
     cfg = load_sq_config(userargs.config)
     try:
         api_key = cfg['API_KEY']
