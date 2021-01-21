@@ -43,7 +43,7 @@ I need a cert for the demo deployment, a self signed cert will do.  In productio
 We can use openssl to generate the certificate with the following command 
 
 ```
-[ec2-user@ip-10-255-0-79 suzieq]$ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+[dev-suzieq]$ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
 Generating a 4096 bit RSA private key
 ....................++
 ........................................++
