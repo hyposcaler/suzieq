@@ -418,5 +418,4 @@ Can test with curl
 [dev-suzieq]$ 
 ```
 
-For production I likely wouldn't use a LoabBalancer service, but would likely use an API gateway as a form of L7LB that routes to services based on URL paths.  In production the API key would be shared between the API gateway and the rest server it fronts for, the API gatway would also handle auth facing the requestor.
-
+For production I may not use a LoabBalancer service, but could also use an API gateway as a form of L7 LB that routes to services based on URL paths. 
