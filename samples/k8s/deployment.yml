@@ -83,10 +83,10 @@ spec:
         image: hyposcaler/suzieq:wip
         resources:
           requests:
-            memory: "128Mi"
+            memory: "500Mi"
             cpu: "125m"
           limits:
-            memory: "250Mi"
+            memory: "2000Mi"
             cpu: "250m"        
         imagePullPolicy: IfNotPresent
         volumeMounts:

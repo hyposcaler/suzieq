@@ -74,17 +74,17 @@ kubectl create secret tls suzieq-tls-secret \
   --key=key.pem
 ```
 
-Regardless of how the cert is created, a k8s TLS secret is typically the interface for the deployment to access it.  There are a variety of methods to manage secrets securely on k8, they tend to have use of k8s secrets or similar mounts, in common as the delivery method for exposing the secrets to containers.  
+Regardless of how the cert is created, a k8s TLS secret is typically the interface for the deployment to access it.  There are a variety of methods to manage secrets securely on k8, they generally tend to have use of k8s secrets as the delivery method for exposing the secrets to containers.  
 
-In practice it creates a good approximation of what suzieq would see in prod.
+In practice it creates a good approximation of what suzieq would see in prod in my enviroment.
 
 Once I have created the k8s TLS secret, the key and cert files from openssl can be deleted.  
 
 ## Generating the configMaps
 
-There are two config related files that we want to use with suzieQ
+There are two config related files that suzieQ uses
 
-the first is `suzieq-cfg.yml`. It is the main suzieq config file, it holds pointers to the assorted paths used by suzieq. It also holds references to the the API_KEY used by the Rest server for auth, and pointers to the locations of the TLS certificates. 
+The first is `suzieq-cfg.yml`. It is the main suzieq config file, it holds pointers to the assorted paths used by suzieq. It also holds references to the the API_KEY used by the Rest server for auth, and pointers to the locations of the TLS certificates. 
 
 The following is a typical `suzieq-cfg.yml` file
 
@@ -103,25 +103,24 @@ rest_keyfile: /suzieq/tls/key.pem
 
 In fact it's the default config, with one small change:  I have added a subdirectory under /suzieq/ to hold the certificates.  I like having an empty directory to mount the TLS secrets into.
 
-The other config we need to keep track of is the inventory.  The inventory is also a yaml based file for this demo we have two, but we are going to store them in the same config map
+The other config we need to keep track of is the inventory.  The inventory is also a yaml based file. 
 
-
+I use this as my standin for inventory
 
 ```yaml
 - namespace: eos
   hosts:
     - url: https://neteng:arista123@10.255.0.10 devtype=eos
-```
-
-```yaml
 - namespace: junos
   hosts:
     - url: ssh://neteng:juniper123@10.255.0.11 devtype=junos-mx
 ```
 
-Note I'm storing the paswords here, for a small private virtual lab that gets spun up and down as needed, I'm happy to do that.  Not something I would want to do in production, and in but in my specific production instance, I need a way to support password based auth.
+Note I'm storing the paswords here, for a small private virtual lab that gets spun up and down as needed, I'm happy to do that.  This is not something I would want to do in production.  It also happens that in my specific production instance, I need a way to support password based auth.  Either via command line argument, enviroment variable, or file, any would work with k8s secrets.
 
-If I were using SSH keys, I would use a k8s ssh key secret and mount them into the suzieq directory under a keys subfolder.  You specify a path to the key in the suzieq poller config, so it would work well for k8s SSH secret.
+If I were using SSH keys, I would use a k8s ssh key secret and mount them into the suzieq directory under a keys subfolder, similar to what I do do with TLS.  You specify a path to the key in the suzieq poller config, so it would work well for k8s SSH secret.
+
+For the suzieq-cfg.yml a config map fits the bill nicely.  For lab purposes or small scale deployments, a configMap should work for inventory as well, there's an upper limit of 1MB, but that's alot of config.
 
 Either way I mash these up into the same yaml file named configmap.yml.  
 
@@ -227,11 +226,11 @@ sq-rest-server.py and suzieq-gui are pretty straight forward, in this deployment
 
 For poller we need to pass in some addtional args 
 
--k to disable host key checking and then arguments for two seperate inventory files
+-k to disable host key checking, and then an argument for the inventory
 
 The final command looks like this 
 
-`command: ['sq-poller', '-k', '-D', '/suzieq/inventory/eos.yml', '-D', '/suzieq/inventory/junos.yml']`
+`command: ['sq-poller', '-k', '-D', '/suzieq/inventory/inventory.yml']`
 
 
 Note: I don't know that I need to use two different files here, but I seem to recall having had issues with doing two namespaces in the same inventory file.  I don't mind the need for two files, but would prefer being able to point the poller at a directory if multiple files are required for multiple namespaces.
@@ -400,7 +399,7 @@ spec:
     app: suzieq
 ```
 
-create the service by running the command `kbuectl create -f samples/k8s/service.yml` from the root of the repo
+Create the service by running the command `kbuectl create -f samples/k8s/service.yml` from the root of the repo
 
 You can validate the service via `kubectl -n suzieq get service`
 
@@ -418,3 +417,6 @@ Can test with curl
 [{"namespace":"eos","hostname":"lab1-fab1-pod1-leaf1","ifname":"Ethernet100","state":"up","adminState":"up","type":"ethernet","mtu":1500,"vlan":0,"master":"","ipAddressList":[],"ip6AddressList":[],"timestamp":1611108293987},{"namespace":"eos","hostname":"lab1-fab1-pod1-leaf1","ifname":"Ethernet1","state":"up","adminState":"up","type":"ethernet","mtu":1500,"vlan":0,"master":"","ipAddressList":["10.255.0.10/24"],"ip6AddressList":[],"timestamp":1611108293987}]
 [dev-suzieq]$ 
 ```
+
+For production I likely wouldn't use a LoabBalancer service, but would likely use an API gateway as a form of L7LB that routes to services based on URL paths.  In production the API key would be shared between the API gateway and the rest server it fronts for, the API gatway would also handle auth facing the requestor.
+
