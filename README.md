@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/netenglabs/suzieq.svg?branch=master)](https://travis-ci.com/netenglabs/suzieq)
+![integration-tests](https://github.com/netenglabs/suzieq/workflows/integration-tests/badge.svg)
 
 # Suzieq -- Network Understanding
 
@@ -65,7 +65,7 @@ We're also looking for collaborators to help us make Suzieq a truly useful multi
 
 ## Latest Release
 
-The latest release is 0.86 and the official release notes are [here](https://suzieq.readthedocs.io/en/latest/release-notes/).
+The latest release is 0.8.7 and the official release notes are [here](https://suzieq.readthedocs.io/en/latest/release-notes/).
 
 ## Quick Start
 
