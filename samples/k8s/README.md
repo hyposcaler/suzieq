@@ -414,6 +414,6 @@ Can test with curl
 [dev-suzieq]$ 
 ```
  
-For production I may not use a LoabBalancer service, but could also use an API gateway as a form of L7 LB that routes to services based on URL paths. 
+For production I may not use a LoadBalancer service, but could also use an API gateway as a form of L7 LB that routes to services based on URL paths. 
  
 
