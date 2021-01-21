@@ -134,11 +134,10 @@ metadata:
   name: suzieq-inventory
   namespace: suzieq
 data:
-  eos.yml: |
+ inventory.yml: |
     - namespace: eos
       hosts:
         - url: https://neteng:arista123@10.255.0.10 devtype=eos
-  junos.yml: |
     - namespace: junos
       hosts:
         - url: ssh://neteng:juniper123@10.255.0.11 devtype=junos-mx
@@ -333,12 +332,9 @@ spec:
             mountPath: /root/.suzieq/suzieq-cfg.yml
             subPath: suzieq-cfg.yml
           - name: inventory-volume
-            mountPath: /suzieq/inventory/eos.yml
-            subPath: eos.yml
-          - name: inventory-volume
-            mountPath: /suzieq/inventory/junos.yml
-            subPath: junos.yml
-        command: ['sq-poller', '-k', '-D', '/suzieq/inventory/eos.yml', '-D', '/suzieq/inventory/junos.yml']
+            mountPath: /suzieq/inventory/inventory.yml
+            subPath: inventory.yml
+        command: ['sq-poller', '-k', '-D', '/suzieq/inventory/inventory.yml']
  
       - name: suzieq-gui
         image: hyposcaler/suzieq:wip
